@@ -47,10 +47,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
 const calendarData = ref([]);
+  let timerId = null;
 
 // --- 📅 自分のPythonバックエンドから予定を取ってくる関数 ---
 const fetchGoogleCalendarEvents = async (startDate, endDate) => {
@@ -161,7 +162,8 @@ const generateComplexCalendar = async () => {
     // 日付データを追加
     currentWeek.push({
       dayNumber: loopDate.getDate(),
-      isToday: dateString === today.toISOString().split('T')[0],
+      isToday: dateString === formatter.format(today).replace(/\//g, '-'),
+      holiday: dayHolidayName,
       events: dayEvents // 🌟 本物の予定がここに入る！
     });
 
@@ -184,8 +186,19 @@ const generateComplexCalendar = async () => {
   calendarData.value = months;
 };
 
+// --- 🚀 画面が立ち上がった時の処理（ライフサイクル） ---
 onMounted(() => {
+  // 1. 最初の一回を実行
   generateComplexCalendar();
+
+  // 3分（180,000ミリ秒）ごとに、上の関数を自動で呼び出します
+  timerId = setInterval(generateComplexCalendar, 180000);
+});
+
+// --- 🛑 画面が閉じられた時のクリーンアップ ---
+onUnmounted(() => {
+  // メモリリークを防ぐためにタイマーを止めます
+  if (timerId) clearInterval(timerId);
 });
 </script>
 
@@ -325,5 +338,17 @@ onMounted(() => {
   text-overflow: ellipsis;
   overflow: hidden;
   font-weight: bold;
+}
+/* 🌸 祝日の文字デザイン（日付の下に小さく可愛く） */
+.holiday-name {
+  font-size: 10px;
+  color: #ff4d79; /* ちょっと濃いめの可愛いピンク */
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 0 2px;
 }
 </style>
