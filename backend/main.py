@@ -18,10 +18,10 @@ app.add_middleware(
 
 # 個人用カレンダーID
 CALENDAR_ID = os.getenv("CALENDAR_ID", "")
-# Google公式の日本祝日ID (行事付き)
-HOLIDAY_CALENDAR_ID = 'ja.japanese.official#holiday@group.v.calendar.google.com'
 # # Google公式の日本祝日ID
-HOLIDAY_CALENDAR_ID = 'ja.japanese#holiday@group.v.calendar.google.com'
+HOLIDAY_CALENDAR_ID = 'ja.japanese.official#holiday@group.v.calendar.google.com'
+# Google公式の日本祝日ID (行事付き)
+# HOLIDAY_CALENDAR_ID = 'ja.japanese#holiday@group.v.calendar.google.com'
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 @app.get("/api/events")
