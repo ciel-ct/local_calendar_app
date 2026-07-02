@@ -23,11 +23,15 @@
               :class="{ 'is-today': day?.isToday, 'is-blank': !day }"
             >
               <template v-if="day">
-                <div class="day-number">{{ day.dayNumber }}</div>
-                <div class="holiday-name">{{ day.holiday }}</div>
+                <div class="day-number">{{ day.dayNumber }}
+                  <a class="holiday-name">{{ day.holiday[0]?.title }}</a>
+                </div>
+                  
                 <div class="day-events">
                   <div v-for="event in day.events" :key="event.id" class="event-bar">
-                    {{ event.title }}
+                    <template v-if="!event.isHoliday">
+                      {{ event.title }}
+                    </template>
                   </div>
                 </div>
               </template>
@@ -156,15 +160,16 @@ const generateComplexCalendar = async () => {
       })
       .map(event => ({
         id: event.id,
-        title: event.summary // Googleの予定のタイトルは「summary」っていう名前なんですっ
+        title: event.summary, // Googleの予定のタイトルは「summary」っていう名前
+        isHoliday: event.isHoliday // 祝日かどうかを判定
       }));
 
     // 日付データを追加
     currentWeek.push({
       dayNumber: loopDate.getDate(),
       isToday: dateString === formatter.format(today).replace(/\//g, '-'),
-      holiday: dayHolidayName,
-      events: dayEvents // 🌟 本物の予定がここに入る！
+      events: dayEvents.filter(event => !event.isHoliday), // 🌟 本物の予定がここに入る！
+      holiday: dayEvents.filter(event => event.isHoliday) // 祝日かどうかを判定
     });
 
     // 3. 土曜日（週の終わり）まで来たら、週を月グループにプッシュして新しい週を作る
@@ -288,37 +293,25 @@ onUnmounted(() => {
 }
 
 .day-number {
-  font-size: 20px;
+  font-size: 35px;
   font-weight: 500;
   color: #3c4043;
-  text-align: center;
+  text-align: left;
   /* width: 20px;
   height: 20px; */
-  line-height: 20px;
-  margin: 0 auto 0 auto;
+  line-height: 30px;
+  display: flex;
+  margin: 0 auto 0 5px;
 }
 
 .is-today {
-  background-color: #eecaf9;
+  background-color: #f6dffe;
 }
-.is-today .day-number {
+/* .is-today .day-number {
   background-color: #ff6699;
   color: #fff;
   border-radius: 25%;
-}
-
-/*祝日の文字デザイン（日付の下に小さく可愛く） */
-.holiday-name {
-  font-size: 10px;
-  color: #ff4d79; /* ちょっと濃いめの可愛いピンク */
-  text-align: center;
-  font-weight: bold;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  padding: 0 2px;
-}
+} */
 
 /* 予定のバー */
 .day-events {
@@ -331,7 +324,7 @@ onUnmounted(() => {
 .event-bar {
   background-color: #ffe6e6;
   color: #ff3377;
-  font-size: 11px;
+  font-size: 15px;
   padding: 2px 4px;
   border-radius: 3px;
   white-space: nowrap;
@@ -341,7 +334,7 @@ onUnmounted(() => {
 }
 /* 🌸 祝日の文字デザイン（日付の下に小さく可愛く） */
 .holiday-name {
-  font-size: 10px;
+  font-size: 18px;
   color: #ff4d79; /* ちょっと濃いめの可愛いピンク */
   text-align: center;
   font-weight: bold;
@@ -349,6 +342,6 @@ onUnmounted(() => {
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
-  padding: 0 2px;
+  padding: 0 5px;
 }
 </style>
