@@ -55,7 +55,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
 const calendarData = ref([]);
-  let timerId = null;
+let timerId = null;
 
 // --- 📅 自分のPythonバックエンドから予定を取ってくる関数 ---
 const fetchGoogleCalendarEvents = async (startDate, endDate) => {
@@ -70,10 +70,10 @@ const fetchGoogleCalendarEvents = async (startDate, endDate) => {
       return result.data; // Pythonが綺麗に取ってきてくれたデータをそのまま使うよっ 🎁
     }
     console.error('Python側でエラーが出たみたい 😢', result.message);
-    return [];
+    return null;
   } catch (error) {
     console.error('バックエンドとの通信に失敗しちゃいました 😭', error);
-    return [];
+    return null;
   }
 };
 
@@ -98,6 +98,12 @@ const generateComplexCalendar = async () => {
 
   let currentMonthGroup = null;
   let currentWeek = [];
+
+  // 予定取得できなかった場合は再描画しないようにする
+  if (!googleEvents) {
+    console.error('Googleカレンダーの予定が取得できませんでした。');
+    return;
+  }
 
   // 2. 合計4週間分（28日）ループを回す
   for (let i = 0; i < 28; i++) {
@@ -141,20 +147,20 @@ const generateComplexCalendar = async () => {
       }
     }
     
-    // 3. Googleの予定の中から「今日の日付」に一致するものをフィルターする！
+    // 3. Googleの予定の中から「今日の日付」に一致するものをフィルターする
     // 🌟 祝日（holidays）と普通の予定（myEvents）に仕分けます
     let dayHolidayName = null;
     const dayEvents = googleEvents
       .filter(event => {
-        // 予定の開始日（終日予定の場合は date、時間指定の場合は dateTime に入るよ 💡）
+        // 予定の開始日（終日予定の場合は date、時間指定の場合は dateTime に入る）
         const eventStart = event.start.dateTime || event.start.date;
         if (!eventStart) return false;
 
-        // Googleから届いた "2026-07-01T01:00:00Z" から、直接「日本時間の日付文字列」を作っちゃいます！
+        // Googleから届いた "2026-07-01T01:00:00Z" から、直接「日本時間の日付文字列」を作る
         const eventDate = new Date(eventStart);
         const eventDateString = formatter.format(eventDate).replace(/\//g, '-');
 
-        // 💡 変換した「日本時間の日付（2026-07-01）」と、マスの「dateString」を比べる！
+        // 💡 変換した「日本時間の日付（2026-07-01）」と、マスの「dateString」を比べる
         return eventDateString === dateString;
 
       })
@@ -168,7 +174,7 @@ const generateComplexCalendar = async () => {
     currentWeek.push({
       dayNumber: loopDate.getDate(),
       isToday: dateString === formatter.format(today).replace(/\//g, '-'),
-      events: dayEvents.filter(event => !event.isHoliday), // 🌟 本物の予定がここに入る！
+      events: dayEvents.filter(event => !event.isHoliday), // 本物の予定がここに入る
       holiday: dayEvents.filter(event => event.isHoliday) // 祝日かどうかを判定
     });
 
@@ -191,16 +197,16 @@ const generateComplexCalendar = async () => {
   calendarData.value = months;
 };
 
-// --- 🚀 画面が立ち上がった時の処理（ライフサイクル） ---
+// --- 画面が立ち上がった時の処理（ライフサイクル） ---
 onMounted(() => {
-  // 1. 最初の一回を実行
+  // 最初の一回を実行
   generateComplexCalendar();
 
   // 3分（180,000ミリ秒）ごとに、上の関数を自動で呼び出します
   timerId = setInterval(generateComplexCalendar, 180000);
 });
 
-// --- 🛑 画面が閉じられた時のクリーンアップ ---
+// --- 画面が閉じられた時のクリーンアップ ---
 onUnmounted(() => {
   // メモリリークを防ぐためにタイマーを止めます
   if (timerId) clearInterval(timerId);
@@ -208,7 +214,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* --- 📱 全体のスタイル --- */
+/* --- 全体のスタイル --- */
 .calendar-app {
   width: 100vw;
   height: 100vh;
@@ -222,7 +228,7 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* 🌟 新設：一番上にずっと固定される曜日ヘッダー */
+/* 一番上にずっと固定される曜日ヘッダー */
 .fixed-weekdays-grid {
   flex-shrink: 0; /* 縦に縮まないように固定 */
   display: grid;
@@ -230,31 +236,22 @@ onUnmounted(() => {
   text-align: center;
   font-weight: bold;
   background-color: #fff; /* 背景を白にして下の文字が透けないように */
-  border-bottom: 2px solid #ffb6c1; /* しえるちゃんピンクの可愛い区切り線 */
+  border-bottom: 2px solid #ffb6c1; 
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
   z-index: 10; /* カレンダーのマスより必ず上に表示するお守り */
 }
 
 .weekday-label {
   color: #5f6368;
-  font-size: 14px;
+  font-size: 20px;
 }
 .weekday-label:nth-child(1) { color: #ffffff; background-color: #ff93b7;} /* 日曜日 */
 .weekday-label:nth-child(7) { color: #ffffff; background-color: #56a8ff;} /* 土曜日 */
-
-/* 縦にスクロールできるコンテナ */
-/* .calendar-scroll-container {
-  flex-grow: 1; 
-  overflow-y: auto;
-  padding: 15px;
-  box-sizing: border-box;
-} */
 
 /* 月ごとのセクション */
 .month-section {
   background: white;
   border-radius: 16px;
-  /* padding: 0 0 0 15px; */
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
 }
 
@@ -262,7 +259,7 @@ onUnmounted(() => {
 .month-header h2 {
   color: #ff6699;
   margin: 0 0 0 0;
-  font-size: 22px;
+  font-size: 30px;
   border-left: 5px solid #ff6699;
   padding-left: 10px;
 }
@@ -297,8 +294,6 @@ onUnmounted(() => {
   font-weight: 500;
   color: #3c4043;
   text-align: left;
-  /* width: 20px;
-  height: 20px; */
   line-height: 30px;
   display: flex;
   margin: 0 auto 0 5px;
@@ -307,11 +302,6 @@ onUnmounted(() => {
 .is-today {
   background-color: #f6dffe;
 }
-/* .is-today .day-number {
-  background-color: #ff6699;
-  color: #fff;
-  border-radius: 25%;
-} */
 
 /* 予定のバー */
 .day-events {
@@ -332,10 +322,10 @@ onUnmounted(() => {
   overflow: hidden;
   font-weight: bold;
 }
-/* 🌸 祝日の文字デザイン（日付の下に小さく可愛く） */
+/* 祝日の文字デザイン */
 .holiday-name {
   font-size: 18px;
-  color: #ff4d79; /* ちょっと濃いめの可愛いピンク */
+  color: #ff4d79;
   text-align: center;
   font-weight: bold;
   margin-bottom: 2px;
